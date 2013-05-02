@@ -139,7 +139,7 @@ expand_nameprefix_arg() {
 
 	local expanded_name
 	local exitcode
-    track_repo=$(hubflow_track_repo "$NAME" "$PREFIX" "$ORIGIN")	
+    track_repo=$(hubflow_track_repo "$NAME" "$PREFIX" "$FEATURE_ORIGIN")	
     expanded_name=$(hubflow_resolve_nameprefix "$NAME" "$PREFIX")
 	exitcode=$?
 	case $exitcode in
@@ -199,7 +199,7 @@ parse_remote_name() {
 }
 
 cmd_start() {
-	DEFINE_boolean fetch true 'fetch from $ORIGIN before creating the new branch' F
+	DEFINE_boolean fetch true 'fetch from $FEATURE_ORIGIN before creating the new branch' F
 	parse_args "$@"
 	BASE=${2:-$DEVELOP_BRANCH}
 	require_name_arg
@@ -209,8 +209,9 @@ cmd_start() {
 	require_remote_available
 	if flag fetch ; then
 		hubflow_fetch_latest_changes_from_origin
+		hubflow_fetch_latest_changes_from_feature_origin
 	fi
-	require_branch_absent "$ORIGIN/$BRANCH"
+	require_branch_absent "$FEATURE_ORIGIN/$BRANCH"
 
 	# if the origin branch counterpart exists, assert that the local branch
 	# isn't behind it (to avoid unnecessary rebasing)
@@ -224,12 +225,12 @@ cmd_start() {
 	fi
 
 	# push it back up to remote repo
-	hubflow_push_latest_changes_to_origin
+	hubflow_push_latest_changes_to_feature_origin
 
 	echo
 	echo "Summary of actions:"
 	echo "- A new branch '$BRANCH' was created, based on '$BASE'"
-	echo "- The branch '$BRANCH' has been pushed up to '$ORIGIN/$BRANCH'"
+	echo "- The branch '$BRANCH' has been pushed up to '$FEATURE_ORIGIN/$BRANCH'"
 	echo "- You are now on branch '$BRANCH'"
 	echo ""
 	echo "Now, start committing on your feature. When done, create a"
@@ -252,7 +253,7 @@ cmd_submit() {
 	hubflow_fetch_latest_changes_from_origin
 
 	# push to origin
-	hubflow_push_latest_changes_to_origin
+	hubflow_push_latest_changes_to_feature_origin
 
 	# pull request details
 	PR_FILE="./COMMIT_MSG"
@@ -323,7 +324,7 @@ EOS
 
 	echo
 	echo "Summary of actions:"
-	echo "- The branch '$BRANCH' was pushed to '$ORIGIN'"
+	echo "- The branch '$BRANCH' was pushed to '$FEATURE_ORIGIN'"
 	echo "- A Pull Request from '$BRANCH' to '$BASE' was created at '$PR_URL'"
 	echo ""
 	echo "Once the Pull Request has been accepted, cleanup the feature with:"
@@ -333,7 +334,7 @@ EOS
 }
 
 cmd_finish() {
-	DEFINE_boolean fetch true "fetch from $ORIGIN before performing finish" F
+	DEFINE_boolean fetch true "fetch from $FEATURE_ORIGIN before performing finish" F
 	DEFINE_boolean rebase false "rebase instead of merge" r
 	DEFINE_boolean keep false "keep branch after performing finish" k
 	DEFINE_boolean force_delete false "force delete feature branch after finish" D
@@ -352,18 +353,18 @@ cmd_finish() {
 		hubflow_merge_latest_changes_from_origin
 	fi
 
-	if has "$ORIGIN/$BRANCH" $(git_remote_branches); then
-		require_branches_equal "$BRANCH" "$ORIGIN/$BRANCH"
+	if has "$FEATURE_ORIGIN/$BRANCH" $(git_remote_branches); then
+		require_branches_equal "$BRANCH" "$FEATURE_ORIGIN/$BRANCH"
 	fi
-	if has "$ORIGIN/$DEVELOP_BRANCH" $(git_remote_branches); then
-		require_branches_equal "$DEVELOP_BRANCH" "$ORIGIN/$DEVELOP_BRANCH"
+	if has "$FEATURE_ORIGIN/$DEVELOP_BRANCH" $(git_remote_branches); then
+		require_branches_equal "$DEVELOP_BRANCH" "$FEATURE_ORIGIN/$DEVELOP_BRANCH"
 	fi
 
 	# make sure that the feature branch has been merged into develop
 	if noflag force_merge ; then
 		if [[ $(git rev-list -n2 "$DEVELOP_BRANCH..$BRANCH") ]] ; then
 			echo
-			echo "Feature branch has not yet been merged into $ORIGIN/$DEVELOP_BRANCH."
+			echo "Feature branch has not yet been merged into $FEATURE_ORIGIN/$DEVELOP_BRANCH."
 			echo "Please raise a pull-request via GitHub first, or use the -f flag."
 			exit 1
 		fi
@@ -393,14 +394,14 @@ cmd_finish() {
 	# when no merge conflict is detected, just clean up the feature branch
 	# delete branch
 	if flag fetch; then
-		git push "$ORIGIN" ":refs/heads/$BRANCH"
+		git push "$FEATURE_ORIGIN" ":refs/heads/$BRANCH"
 	fi
 
 	# switch to the develop branch
 	hubflow_change_branch "$DEVELOP_BRANCH"
 
 	# if we merged locally, push those changes up to origin
-	hubflow_push_latest_changes_to_origin
+	hubflow_push_latest_changes_to_feature_origin
 
 	# delete the local branch if it is no longer needed
 	if noflag keep; then
@@ -414,7 +415,7 @@ cmd_finish() {
 	echo
 	echo "Summary of actions:"
 	if flag fetch ; then
-		echo "- The latest changes from '$ORIGIN' were merged into '$MASTER_BRANCH' and '$DEVELOP_BRANCH'"
+		echo "- The latest changes from '$FEATURE_ORIGIN' were merged into '$MASTER_BRANCH' and '$DEVELOP_BRANCH'"
 	fi
 	echo "- The feature branch '$BRANCH' was merged into '$DEVELOP_BRANCH'"
 	if flag keep; then
@@ -423,7 +424,7 @@ cmd_finish() {
 		echo "- Feature branch '$BRANCH' has been removed"
 	fi
 	if flag fetch; then
-		echo "- Feature branch '$ORIGIN/$BRANCH' has been removed"
+		echo "- Feature branch '$FEATURE_ORIGIN/$BRANCH' has been removed"
 	fi
 	echo "- You are now on branch '$DEVELOP_BRANCH'"
 }
@@ -496,8 +497,8 @@ cmd_push() {
 }
 
 cmd_cancel() {
-	DEFINE_boolean fetch true "fetch from $ORIGIN before performing cancel" F
-	DEFINE_boolean push true "push to $ORIGIN after performing cancel" p
+	DEFINE_boolean fetch true "fetch from $FEATURE_ORIGIN before performing cancel" F
+	DEFINE_boolean push true "push to $FEATURE_ORIGIN after performing cancel" p
 	DEFINE_boolean keep false "keep branch after performing cancel" k
 	DEFINE_boolean force false "safety feature; cannot cancel a feature without this flag" f
 
@@ -515,13 +516,13 @@ cmd_cancel() {
 	require_branch "$BRANCH"
 	require_clean_working_tree
 	if flag push ; then
-		git push "$ORIGIN" "$BRANCH" || die "Could not push feature branch up to $ORIGIN"
+		git push "$FEATURE_ORIGIN" "$BRANCH" || die "Could not push feature branch up to $FEATURE_ORIGIN"
 	fi
 
 	# delete the remote branch
 	if flag push ; then
-		git push "$ORIGIN" :"$BRANCH" || \
-			die "Could not delete the remote $BRANCH in $ORIGIN."
+		git push "$FEATURE_ORIGIN" :"$BRANCH" || \
+			die "Could not delete the remote $BRANCH in $FEATURE_ORIGIN."
 	fi
 
 	# delete the local branch
@@ -536,10 +537,10 @@ cmd_cancel() {
 	echo
 	echo "Summary of actions:"
 	if flag push ; then
-		echo "- Latest objects have been fetched from '$ORIGIN'"
+		echo "- Latest objects have been fetched from '$FEATURE_ORIGIN'"
 	fi
 	if flag push ; then
-		echo "- Feature branch '$BRANCH' in '$ORIGIN' has been deleted."
+		echo "- Feature branch '$BRANCH' in '$FEATURE_ORIGIN' has been deleted."
 	fi
 	if flag keep ; then
 		echo "- Feature branch '$BRANCH' is still available locally"
