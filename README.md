@@ -25,8 +25,11 @@ Upgrading to the latest version of the HubFlow tools is very easy:
 Getting Started
 ---------------
 
-1. add your `fork` remote. `git remote add remote_fork_name remote_fork_url`
-2. Configure HubFlow to work with your fork remote. `git config hubflow.featureOrigin remote_fork_name`
+Run `git hf init` on your repository folder
+
+If you want to work with fork support in your repository you have two options:
+1. Answer Y when the script asks if you want to use forks and specifying user name
+2. Run init specifying the fork user name directly on init script parameters `git hf init --fork=patterComunitatis`
 
 Now, your HubFlow is ready to fetch and pull from the origin, but to push changes to your fork remote.
 
