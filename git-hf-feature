@@ -489,11 +489,11 @@ avoid_accidental_cross_branch_action() {
 }
 
 cmd_pull() {
-	git pull $FEATURE_ORIGIN "$BRANCH"
+	git pull $FEATURE_ORIGIN "$BRANCH" "$@"
 }
 
 cmd_push() {
-	git push $FEATURE_ORIGIN "$BRANCH"
+	git push $FEATURE_ORIGIN "$BRANCH" "$@"
 }
 
 cmd_cancel() {
