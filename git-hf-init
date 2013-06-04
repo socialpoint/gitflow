@@ -41,7 +41,7 @@
 #
 
 usage() {
-	echo "usage: git hf init [-a|-f|--fork]"
+	echo "usage: git hf init [-af]"
 }
 
 parse_args() {
@@ -54,7 +54,6 @@ parse_args() {
 cmd_default() {
 	DEFINE_boolean force false 'force setting of hubflow branches, even if already configured' f
 	DEFINE_boolean ask false 'ask for branch naming conventions' a
-	DEFINE_string fork 'origin' 'name of the fork work in a fork of the original project'
 	parse_args "$@"
 
 	if ! git rev-parse --git-dir >/dev/null 2>&1; then
@@ -65,7 +64,7 @@ cmd_default() {
 	fi
 
 	# running git hf init on an already initialized repo is fine
-	if hubflow_is_initialized && ! flag force && [ "$FLAGS_fork" = "origin" ]; then
+	if hubflow_is_initialized && ! flag force; then
 		warn "Already initialized for hubflow."
 		warn "To force reinitialization, use: git hf init -f"
 		exit 0
@@ -342,53 +341,17 @@ cmd_default() {
 		git config hubflow.prefix.versiontag "$prefix"
 	fi
 
-	# Fork support
-	if [ "$FLAGS_fork" != "origin" ]; then
-		set_fork_remote "$FLAGS_fork"
-		git config hubflow.featureOrigin "fork"
-	else
-		if ! git config --get hubflow.featureOrigin >/dev/null 2>&1 || flag force; then
-			printf "Are you using a fork (Y/N)? [N]"
-			read using_fork
-			if [ "$using_fork" = "Y" ]; then
-				printf "Please specify gitHub username where the fork is? [paterCommunitatis] "
-				read answer
-				set_fork_remote "$answer"
-				git config hubflow.featureOrigin "fork"
-			fi
-		fi
-	fi
-
 	# at this point, we should be on the develop branch, which may or
 	# may not exist at origin
 	#
-    # Load the settings that were just written so that $ORIGIN,
+        # Load the settings that were just written so that $ORIGIN,
 	# etc. are properly defined
-    hubflow_load_settings
-
+        hubflow_load_settings
 	# push up to origin, in case this branch does not exist there (yet)
-	# but not if we are working with forks. When working with forks we
-	# push changes to fork
-	if ! git config --get hubflow.featureOrigin >/dev/null 2>&1; then
-		printf "Pushing changes to origin\n"
-		hubflow_push_latest_changes_to_origin
-	else
-		printf "Pusing changes to fork\n"
-		hubflow_push_latest_changes_to_feature_origin
-	fi
+	hubflow_push_latest_changes_to_origin
 }
 
 cmd_help() {
 	usage
 	exit 0
-}
-
-set_fork_remote() {
-	remote=`git config remote.origin.url | sed -E "s#\:[A-Za-z]+\/#\:$1\/#"`;
-
-	if [ `git remote | grep fork` ] ; then
-	    git remote set-url fork $remote
-	else
-	    git remote add fork $remote
-	fi
 }
