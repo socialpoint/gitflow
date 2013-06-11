@@ -196,7 +196,8 @@ finish_release() {
 		# but the tag was set successful, we skip it now
 		local tagname=$VERSION_PREFIX$VERSION
 		if ! git_tag_exists "$tagname"; then
-			local opts="-a"
+			# local opts="-a"
+			local opts=""
 			flag sign && opts="$opts -s"
 			[ "$FLAGS_signingkey" != "" ] && opts="$opts -u '$FLAGS_signingkey'"
 			[ "$FLAGS_message" != "" ] && opts="$opts -m '$FLAGS_message'"
@@ -216,10 +217,10 @@ finish_release() {
 			# branch - and the new tag (if provided) - a parent of the development
 			# branch, which in turn lets you use 'git describe' on either branch
 			if noflag notag; then
-				git merge --no-ff "$tagname" || \
+				git merge --no-ff --no-edit "$tagname" || \
 					die "There were merge conflicts."
 			else
-				git merge --no-ff "$MASTER_BRANCH" || \
+				git merge --no-ff --no-edit "$MASTER_BRANCH" || \
 				die "There were merge conflicts."
 			fi
 		fi
@@ -230,7 +231,7 @@ finish_release() {
 		git checkout "$DEVELOP_BRANCH" || \
 			die "Could not check out $DEVELOP_BRANCH."
 		# just merge the release branch into the development branch
-		git merge --no-ff "$BRANCH" || \
+		git merge --no-ff --no-edit "$BRANCH" || \
 			die "There were merge conflicts."
 		fi
 	fi
