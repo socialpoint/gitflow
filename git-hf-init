@@ -54,6 +54,7 @@ parse_args() {
 cmd_default() {
 	DEFINE_boolean force false 'force setting of hubflow branches, even if already configured' f
 	DEFINE_boolean ask false 'ask for branch naming conventions' a
+	DEFINE_boolean noquestions false 'init without asking fork'
 	DEFINE_string fork 'origin' 'name of the fork work in a fork of the original project'
 	parse_args "$@"
 
@@ -343,22 +344,23 @@ cmd_default() {
 	fi
 
 	# Fork support
-	if [ "$FLAGS_fork" != "origin" ]; then
-		set_fork_remote "$FLAGS_fork"
-		git config hubflow.featureOrigin "fork"
-	else
-		if ! git config --get hubflow.featureOrigin >/dev/null 2>&1 || flag force; then
-			printf "Are you using a fork (Y/N)? [N]"
-			read using_fork
-			if [ "$using_fork" = "Y" ]; then
-				printf "Please specify gitHub username where the fork is? [paterCommunitatis] "
-				read answer
-				set_fork_remote "$answer"
-				git config hubflow.featureOrigin "fork"
+	if noflag noquestions; then
+		if [ "$FLAGS_fork" != "origin" ]; then
+			set_fork_remote "$FLAGS_fork"
+			git config hubflow.featureOrigin "fork"
+		else
+			if ! git config --get hubflow.featureOrigin >/dev/null 2>&1 || flag force; then
+				printf "Are you using a fork (Y/N)? [N]"
+				read using_fork
+				if [ "$using_fork" = "Y" ]; then
+					printf "Please specify gitHub username where the fork is? [paterCommunitatis] "
+					read answer
+					set_fork_remote "$answer"
+					git config hubflow.featureOrigin "fork"
+				fi
 			fi
 		fi
 	fi
-
 	# at this point, we should be on the develop branch, which may or
 	# may not exist at origin
 	#
