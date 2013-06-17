@@ -185,7 +185,7 @@ finish_release() {
 	if ! git_is_branch_merged_into "$BRANCH" "$MASTER_BRANCH"; then
 		git checkout "$MASTER_BRANCH" || \
 		  die "Could not check out $MASTER_BRANCH."
-		git merge --no-ff -srecursive -Xtheirs "$BRANCH" || \
+		git merge --no-ff --no-edit -srecursive -Xtheirs "$BRANCH" || \
 		  die "There were merge conflicts."
 		  # TODO: What do we do now?
 	fi
