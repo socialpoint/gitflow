@@ -9,7 +9,7 @@ for [DataSift's HubFlow branching model](http://datasift.github.com/gitflow/), w
 Installation
 ------------
 
-1. `git clone git@github.com/datasift/gitflow.git`
+1. `git clone git@github.com:socialpoint/gitflow.git`
 2. `cd gitflow`
 3. `sudo ./install.sh`
 
@@ -24,6 +24,31 @@ Upgrading to the latest version of the HubFlow tools is very easy:
 
 Getting Started
 ---------------
+
+Run `git hf init` on your repository folder
+
+If you want to work with fork support in your repository you have two options:
+1. Answer Y when the script asks if you want to use forks and specifying user name
+2. Run init specifying the fork user name directly on init script parameters `git hf init --fork=patterComunitatis`
+
+Now, your HubFlow is ready to fetch and pull from the origin, but to push changes to your fork remote.
+
+An example of the git repo config file (.git/config):
+
+    [hubflow]
+            featureOrigin = fork
+    [hubflow "branch"]
+            master = master
+            develop = develop
+    [hubflow "prefix"]
+            feature = feature/
+            release = release/
+            hotfix = hotfix/
+            support = support/
+            versiontag =
+    [remote "fork"]
+            url = git@github.com:smoya/sp-platform-basev2.git
+            fetch = +refs/heads/*:refs/remotes/fork/*
 
 See our tutorial website to learn more about the [GitFlow](http://datasift.github.com/gitflow/IntroducingGitFlow.html) branching model and [how to use the HubFlow tools](http://datasift.github.com/gitflow/GitFlowForGitHub.html).
 

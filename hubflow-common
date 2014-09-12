@@ -44,7 +44,7 @@
 # Common variables
 #
 
-HUBFLOW_VERSION=1.5.1
+HUBFLOW_VERSION=1.5.2
 HUBFLOW_REPO=https://github.com/datasift/gitflow
 
 #
@@ -207,6 +207,7 @@ hubflow_load_settings() {
 	export DEVELOP_BRANCH=$(git config --get hubflow.branch.develop)
 	export ORIGIN=$(git config --get hubflow.origin || echo origin)
     export BRANCH=$(git_current_branch)
+    export FEATURE_ORIGIN=$(git config --get hubflow.featureOrigin || echo origin)
 }
 
 hubflow_change_branch() {
@@ -359,6 +360,10 @@ hubflow_fetch_latest_changes_from_origin() {
     git fetch --tags  || die "Unable to fetch latest tags from '$ORIGIN'"
 }
 
+hubflow_fetch_latest_changes_from_feature_origin() {
+    git fetch "$FEATURE_ORIGIN" || die "Unable to fetch latest changes from '$FEATURE_ORIGIN'"
+    git fetch "$FEATURE_ORIGIN" --tags  || die "Unable to fetch latest tags from '$FEATURE_ORIGIN'"
+}
 hubflow_merge_latest_changes_from_origin() {
     # we need to fetch the latest changes from upstream, before we can merge
     hubflow_fetch_latest_changes_from_origin
@@ -402,7 +407,7 @@ hubflow_push_latest_changes_to_origin() {
 
         # configure remote tracking
         git config "branch.$current_branch.remote" "$ORIGIN"
-        git config "branch.$current_branch.merge" "refs/heads/$ORIGIN"
+        git config "branch.$current_branch.merge" "refs/heads/$current_branch"
 
         # we're done
         return 1
@@ -417,6 +422,40 @@ hubflow_push_latest_changes_to_origin() {
     git_compare_branches "$current_branch" "$ORIGIN/$current_branch"
     if [[ $? -ne 0 ]] ; then
         git push "$ORIGIN" "$current_branch:refs/heads/$current_branch" || die "Push to '$ORIGIN' failed"
+        return 3
+    fi
+
+    # no action taken
+    return 0
+}
+
+# $1: 'force' if push should overwrite existing origin contents
+hubflow_push_latest_changes_to_feature_origin() {
+    local current_branch=$(git_current_branch)
+
+    if ! git_branch_exists "$FEATURE_ORIGIN/$current_branch" ; then
+        # create remote branch
+        git push "$FEATURE_ORIGIN" "$current_branch:refs/heads/$current_branch"  || die "Push to '$FEATURE_ORIGIN' failed"
+        # bring metadata back
+        git fetch -q "$FEATURE_ORIGIN"
+
+        # configure remote tracking
+        git config "branch.$current_branch.remote" "$FEATURE_ORIGIN"
+        git config "branch.$current_branch.merge" "refs/heads/$FEATURE_ORIGIN"
+
+        # we're done
+        return 1
+    fi
+
+    # we have an existing branch to update or overwrite
+    if [[ $1 == "force" ]] ; then
+        git push --force "$FEATURE_ORIGIN" "$current_branch:refs/heads/$current_branch" || die "Push to '$FEATURE_ORIGIN' failed"
+        return 2
+    fi
+
+    git_compare_branches "$current_branch" "$FEATURE_ORIGIN/$current_branch"
+    if [[ $? -ne 0 ]] ; then
+        git push "$FEATURE_ORIGIN" "$current_branch:refs/heads/$current_branch" || die "Push to '$FEATURE_ORIGIN' failed"
         return 3
     fi
 
